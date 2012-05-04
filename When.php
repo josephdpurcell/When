@@ -586,6 +586,7 @@ class When
 				}
 			}
 		}
+        /*
 		elseif($this->gobyday || $interval == "month")
 		{
 			$_mdays = range(1, date('t',mktime(0,0,0,$month,1,$year)));
@@ -603,6 +604,8 @@ class When
 			}
 		}
 		elseif($this->gobymonth)
+        */
+        elseif ($this->gobymonth || $interval == "month")
 		{
 			foreach($this->bymonth as $_month)
 			{
