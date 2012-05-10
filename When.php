@@ -34,7 +34,8 @@ class When
 	protected $gobysetpos;
 	protected $bysetpos;
 		
-	protected $suggestions;
+	protected $prev_suggestions;
+	protected $next_suggestions;
 	
 	protected $count;
 	protected $counter;
@@ -75,7 +76,7 @@ class When
 		// setup the range for valid weeks
 		$this->byweekno = range(0,54);
 		
-		$this->suggestions = array();
+		$this->next_suggestions = array();
 		
 		// this will be set if a count() is specified
 		$this->count = 0;
@@ -397,9 +398,8 @@ class When
 		
 		return $this;
 	}
-	
-	// this creates a basic list of dates to "try"
-	protected function create_suggestions()
+
+	protected function create_prev_suggestions()
 	{
 		switch($this->frequency)
 		{
@@ -436,7 +436,7 @@ class When
 		{				
 			if($this->try_date == $this->start_date)
 			{
-				$this->suggestions[] = clone $this->try_date;
+				$this->next_suggestions[] = clone $this->try_date;
 			}
 			else
 			{
@@ -473,11 +473,11 @@ class When
 						
 						if($_pos > 0)
 						{
-							$this->suggestions[] = clone $tmp_array[$_pos - 1];
+							$this->next_suggestions[] = clone $tmp_array[$_pos - 1];
 						}
 						else
 						{
-							$this->suggestions[] = clone $tmp_array[count($tmp_array) + $_pos];
+							$this->next_suggestions[] = clone $tmp_array[count($tmp_array) + $_pos];
 						}
 						
 					}
@@ -493,7 +493,7 @@ class When
 					$_day--;
 					
 					$_time = strtotime('+' . $_day . ' days', mktime(0, 0, 0, 1, 1, $year));
-					$this->suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
 				}
 				else
 				{
@@ -505,7 +505,7 @@ class When
 					}
 					
 					$_time = strtotime('+' . $year_day_neg . ' days', mktime(0, 0, 0, 1, 1, $year));
-					$this->suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
 				}					
 			}
 		}
@@ -525,18 +525,18 @@ class When
 					
 					if($date_time >= $this->start_date && in_array($week, $this->byweekno))
 					{
-						$this->suggestions[] = clone $date_time;
+						$this->next_suggestions[] = clone $date_time;
 					}
 				}
 			}
 		}
 		elseif($interval == "day")
 		{
-			$this->suggestions[] = clone $this->try_date;
+			$this->next_suggestions[] = clone $this->try_date;
 		}
 		elseif($interval == "week")
 		{
-			$this->suggestions[] = clone $this->try_date;
+			$this->next_suggestions[] = clone $this->try_date;
 			
 			if($this->gobyday)
 			{
@@ -577,7 +577,7 @@ class When
 
 					if($week_day != $this->wkst)
 					{
-						$this->suggestions[] = clone $tmp_date;
+						$this->next_suggestions[] = clone $tmp_date;
 					}
 					else
 					{
@@ -599,7 +599,247 @@ class When
 				
 				if($date_time >= $this->start_date && in_array($week, $this->byweekno))
 				{
-					$this->suggestions[] = clone $date_time;
+					$this->next_suggestions[] = clone $date_time;
+				}
+			}
+		}
+		elseif($this->gobymonth)
+        */
+        elseif ($this->gobymonth || $interval == "month")
+		{
+			$m = $month;
+			$y = $year;
+			for ($i=1; $i<13; $i++) {
+				$m--;
+				if ($m<1) {
+					$y--;
+					$m = 12;
+				}
+				$date_time = new DateTime($y . '-' . $m . '-' . $month_day . ' ' . $timestamp);
+				
+				if($date_time <= $this->start_date)
+				{
+					$this->prev_suggestions[] = clone $date_time;
+				}
+			}
+		} 
+		else 
+		{
+			$this->next_suggestions[] = clone $this->try_date;
+		}
+		
+		if($interval == "month")
+		{
+			$this->try_date->modify('last day of ' . $this->interval . ' ' . $interval);
+		}
+		else
+		{
+			$this->try_date->modify($this->interval . ' ' . $interval);
+		}
+	}
+	
+	// this creates a basic list of dates to "try"
+	protected function create_next_suggestions()
+	{
+		switch($this->frequency)
+		{
+			case "YEARLY":
+				$interval = 'year';
+				break;
+			case "MONTHLY":
+				$interval = 'month';
+				break;
+			case "WEEKLY":
+				$interval = 'week';
+				break;
+			case "DAILY":
+				$interval = 'day';
+				break;
+			case "HOURLY":
+				$interval = 'hour';
+				break;
+			case "MINUTELY":
+				$interval = 'minute';
+				break;
+			case "SECONDLY":
+				$interval = 'second';
+				break;
+		}
+					
+		$month_day = $this->try_date->format('j');
+		$month = $this->try_date->format('n');
+		$year = $this->try_date->format('Y');
+		
+		$timestamp = $this->try_date->format('H:i:s');
+					
+		if($this->gobysetpos)
+		{				
+			if($this->try_date == $this->start_date)
+			{
+				$this->next_suggestions[] = clone $this->try_date;
+			}
+			else
+			{
+				if($this->gobyday)
+				{
+					foreach($this->bysetpos as $_pos)
+					{
+						$tmp_array = array();
+						$_mdays = range(1, date('t',mktime(0,0,0,$month,1,$year)));
+						foreach($_mdays as $_mday)
+						{
+							$date_time = new DateTime($year . '-' . $month . '-' . $_mday . ' ' . $timestamp);
+							
+							$occur = ceil($_mday / 7);
+							
+							$day_of_week = $date_time->format('l');
+							$dow_abr = strtoupper(substr($day_of_week, 0, 2));
+							
+							// set the day of the month + (positive)
+							$occur = '+' . $occur . $dow_abr;
+							$occur_zero = '+0' . $dow_abr;
+							
+							// set the day of the month - (negative)
+							$total_days = $date_time->format('t') - $date_time->format('j');
+							$occur_neg = '-' . ceil(($total_days + 1)/7) . $dow_abr;
+							
+							$day_from_end_of_month = $date_time->format('t') + 1 - $_mday;
+							
+							if(in_array($occur, $this->byday) || in_array($occur_zero, $this->byday) || in_array($occur_neg, $this->byday))
+							{								
+								$tmp_array[] = clone $date_time;
+							}
+						}
+						
+						if($_pos > 0)
+						{
+							$this->next_suggestions[] = clone $tmp_array[$_pos - 1];
+						}
+						else
+						{
+							$this->next_suggestions[] = clone $tmp_array[count($tmp_array) + $_pos];
+						}
+						
+					}
+				}
+			}
+		}
+		elseif($this->gobyyearday)
+		{
+			foreach($this->byyearday as $_day)
+			{
+				if($_day >= 0)
+				{
+					$_day--;
+					
+					$_time = strtotime('+' . $_day . ' days', mktime(0, 0, 0, 1, 1, $year));
+					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+				}
+				else
+				{
+					$year_day_neg = 365 + $_day;
+					$leap_year = $this->try_date->format('L');
+					if($leap_year == 1)
+					{
+						$year_day_neg = 366 + $_day;
+					}
+					
+					$_time = strtotime('+' . $year_day_neg . ' days', mktime(0, 0, 0, 1, 1, $year));
+					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+				}					
+			}
+		}
+		// special case because for years you need to loop through the months too
+		elseif($this->gobyday && $interval == "year")
+		{
+			foreach($this->bymonth as $_month)
+			{
+				// this creates an array of days of the month
+				$_mdays = range(1, date('t',mktime(0,0,0,$_month,1,$year)));
+				foreach($_mdays as $_mday)
+				{
+					$date_time = new DateTime($year . '-' . $_month . '-' . $_mday . ' ' . $timestamp);
+					
+					// get the week of the month (1, 2, 3, 4, 5, etc)
+					$week = $date_time->format('W');
+					
+					if($date_time >= $this->start_date && in_array($week, $this->byweekno))
+					{
+						$this->next_suggestions[] = clone $date_time;
+					}
+				}
+			}
+		}
+		elseif($interval == "day")
+		{
+			$this->next_suggestions[] = clone $this->try_date;
+		}
+		elseif($interval == "week")
+		{
+			$this->next_suggestions[] = clone $this->try_date;
+			
+			if($this->gobyday)
+			{
+				$week_day = $this->try_date->format('w');
+				
+				$days_in_month = $this->try_date->format('t');
+				
+				$overflow_count = 1;
+				$_day = $month_day;
+				
+				$run = true;
+				while($run)
+				{
+					$_day++;
+					if($_day <= $days_in_month)
+					{
+						$tmp_date = new DateTime($year . '-' . $month . '-' . $_day . ' ' . $timestamp);
+					}
+					else
+					{
+						//$tmp_month = $month+1;
+						$tmp_date = new DateTime($year . '-' . $month . '-' . $overflow_count . ' ' . $timestamp);
+						$tmp_date->modify('+1 month');
+						$overflow_count++;
+					}
+					
+					$week_day = $tmp_date->format('w');
+					
+					if($this->try_date == $this->start_date)
+					{
+						if($week_day == $this->wkst)
+						{
+							$this->try_date = clone $tmp_date;
+							$this->try_date->modify('-7 days');
+							$run = false;
+						}
+					}
+
+					if($week_day != $this->wkst)
+					{
+						$this->next_suggestions[] = clone $tmp_date;
+					}
+					else
+					{
+						$run = false;
+					}
+				}
+			}
+		}
+        /*
+		elseif($this->gobyday || $interval == "month")
+		{
+			$_mdays = range(1, date('t',mktime(0,0,0,$month,1,$year)));
+			foreach($_mdays as $_mday)
+			{
+				$date_time = new DateTime($year . '-' . $month . '-' . $_mday . ' ' . $timestamp);
+				
+				// get the week of the month (1, 2, 3, 4, 5, etc)
+				$week = $date_time->format('W');
+				
+				if($date_time >= $this->start_date && in_array($week, $this->byweekno))
+				{
+					$this->next_suggestions[] = clone $date_time;
 				}
 			}
 		}
@@ -613,13 +853,13 @@ class When
 				
 				if($date_time >= $this->start_date)
 				{
-					$this->suggestions[] = clone $date_time;
+					$this->next_suggestions[] = clone $date_time;
 				}
 			}
 		} 
 		else 
 		{
-			$this->suggestions[] = clone $this->try_date;
+			$this->next_suggestions[] = clone $this->try_date;
 		}
 		
 		if($interval == "month")
@@ -681,7 +921,7 @@ class When
 
 	// return the next valid DateTime object which matches the pattern and follows the rules
 	public function next()
-	{		
+	{
 		// check the counter is set
 		if($this->count !== 0)
 		{
@@ -692,16 +932,16 @@ class When
 		}
 		
 		// create initial set of suggested dates
-		if(count($this->suggestions) === 0)
+		if(count($this->next_suggestions) === 0)
 		{
-			$this->create_suggestions();
+			$this->create_next_suggestions();
 		}
 		
 		// loop through the suggested dates
-		while(count($this->suggestions) > 0)
+		while(count($this->next_suggestions) > 0)
 		{
 			// get the first one on the array
-			$try_date = array_shift($this->suggestions);
+			$try_date = array_shift($this->next_suggestions);
 			
 			// make sure the date doesn't exceed the max date
 			if($try_date > $this->end_date)
@@ -718,9 +958,57 @@ class When
 			else
 			{
 				// we might be out of suggested days, so load some more
-				if(count($this->suggestions) === 0)
+				if(count($this->next_suggestions) === 0)
 				{
-					$this->create_suggestions();
+					$this->create_next_suggestions();
+				}
+			}
+		}
+	}
+
+	public function prev()
+	{
+		// check the counter is set
+		if($this->count !== 0)
+		{
+			if($this->counter >= $this->count)
+			{
+				return false;
+			}
+		}
+
+		// create initial set of suggested dates
+		if(count($this->prev_suggestions) === 0)
+		{
+			$this->create_prev_suggestions();
+		}
+
+		// loop through the suggested dates
+		while(count($this->prev_suggestions) > 0)
+		{
+			// get the first one on the array
+			$try_date = array_shift($this->prev_suggestions);
+
+			// make sure the date doesn't exceed the max date
+			/*
+			if($try_date < $this->end_date)
+			{
+				return false;
+			}
+			*/
+
+			// make sure it falls within the allowed days
+			if($this->valid_date($try_date) === true)
+			{
+				$this->counter++;
+				return $try_date;
+			}
+			else
+			{
+				// we might be out of suggested days, so load some more
+				if(count($this->prev_suggestions) === 0)
+				{
+					$this->create_prev_suggestions();
 				}
 			}
 		}

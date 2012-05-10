@@ -148,7 +148,7 @@ class When_Parser_Test extends PHPUnit_Framework_TestCase
 	}
 
     /**
-     * @monthly
+     * @group monthly
      * @group every_month_on_day
      */
     public function testEveryMonthOnDay ()
@@ -166,7 +166,7 @@ class When_Parser_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @yearly
+     * @group yearly
      * @group every_jan
      */
     public function testEveryJan ()
@@ -184,7 +184,7 @@ class When_Parser_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @yearly
+     * @group yearly
      * @group every_jan_on_day
      */
     public function testEveryJanOnDay ()
