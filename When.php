@@ -436,7 +436,7 @@ class When
 		{				
 			if($this->try_date == $this->start_date)
 			{
-				$this->next_suggestions[] = clone $this->try_date;
+				$this->prev_suggestions[] = clone $this->try_date;
 			}
 			else
 			{
@@ -473,11 +473,11 @@ class When
 						
 						if($_pos > 0)
 						{
-							$this->next_suggestions[] = clone $tmp_array[$_pos - 1];
+							$this->prev_suggestions[] = clone $tmp_array[$_pos - 1];
 						}
 						else
 						{
-							$this->next_suggestions[] = clone $tmp_array[count($tmp_array) + $_pos];
+							$this->prev_suggestions[] = clone $tmp_array[count($tmp_array) + $_pos];
 						}
 						
 					}
@@ -493,7 +493,7 @@ class When
 					$_day--;
 					
 					$_time = strtotime('+' . $_day . ' days', mktime(0, 0, 0, 1, 1, $year));
-					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+					$this->prev_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
 				}
 				else
 				{
@@ -505,7 +505,7 @@ class When
 					}
 					
 					$_time = strtotime('+' . $year_day_neg . ' days', mktime(0, 0, 0, 1, 1, $year));
-					$this->next_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
+					$this->prev_suggestions[] = new Datetime(date('Y-m-d', $_time) . ' ' . $timestamp);
 				}					
 			}
 		}
@@ -525,18 +525,18 @@ class When
 					
 					if($date_time >= $this->start_date && in_array($week, $this->byweekno))
 					{
-						$this->next_suggestions[] = clone $date_time;
+						$this->prev_suggestions[] = clone $date_time;
 					}
 				}
 			}
 		}
 		elseif($interval == "day")
 		{
-			$this->next_suggestions[] = clone $this->try_date;
+			$this->prev_suggestions[] = clone $this->try_date;
 		}
 		elseif($interval == "week")
 		{
-			$this->next_suggestions[] = clone $this->try_date;
+			$this->prev_suggestions[] = clone $this->try_date;
 			
 			if($this->gobyday)
 			{
@@ -577,7 +577,7 @@ class When
 
 					if($week_day != $this->wkst)
 					{
-						$this->next_suggestions[] = clone $tmp_date;
+						$this->prev_suggestions[] = clone $tmp_date;
 					}
 					else
 					{
@@ -599,7 +599,7 @@ class When
 				
 				if($date_time >= $this->start_date && in_array($week, $this->byweekno))
 				{
-					$this->next_suggestions[] = clone $date_time;
+					$this->prev_suggestions[] = clone $date_time;
 				}
 			}
 		}
@@ -617,7 +617,7 @@ class When
 				}
 				$date_time = new DateTime($y . '-' . $m . '-' . $month_day . ' ' . $timestamp);
 				
-				if($date_time <= $this->start_date)
+				if($date_time < $this->start_date)
 				{
 					$this->prev_suggestions[] = clone $date_time;
 				}
@@ -625,7 +625,7 @@ class When
 		} 
 		else 
 		{
-			$this->next_suggestions[] = clone $this->try_date;
+			$this->prev_suggestions[] = clone $this->try_date;
 		}
 		
 		if($interval == "month")
@@ -847,15 +847,21 @@ class When
         */
         elseif ($this->gobymonth || $interval == "month")
 		{
-			foreach($this->bymonth as $_month)
-			{
-				$date_time = new DateTime($year . '-' . $_month . '-' . $month_day . ' ' . $timestamp);
+			$m = $month;
+			$y = $year;
+			for ($i=1; $i<13; $i++) {
+				$m++;
+				if ($m>12) {
+					$y++;
+					$m = 1;
+				}
+				$date_time = new DateTime($y . '-' . $m . '-' . $month_day . ' ' . $timestamp);
 				
-				if($date_time >= $this->start_date)
+				if($date_time > $this->start_date)
 				{
 					$this->next_suggestions[] = clone $date_time;
 				}
-			}
+            }
 		} 
 		else 
 		{
